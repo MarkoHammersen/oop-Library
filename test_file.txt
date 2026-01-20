@@ -1,0 +1,2 @@
+Testing RAII resource management
+Testing RAII resource management
