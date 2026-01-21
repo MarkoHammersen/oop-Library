@@ -17,4 +17,4 @@ coverage: run
 	gcovr ./. --exclude-unreachable-branches --exclude-throw-branches --html --html-details -o coverage.html
 
 clean:
-	rm -f $(TARGET) *.gcda *.gcno *.gcov
+	rm -f $(TARGET) *.gcda *.gcno *.gcov *.html
