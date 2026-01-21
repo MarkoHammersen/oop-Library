@@ -139,9 +139,75 @@ public:
 /**
  * TODO: Implement Magazine class - derives from LibraryItem
  */
+class Magazine : public LibraryItem {
+  private:
+    std::string issueNumber_;
+    std::string publisher_;
+public:
+    // Constructor
+    Magazine(std::string id, std::string title, std::string issueNumber, std::string publisher)
+        : LibraryItem(std::move(id), std::move(title)),
+      issueNumber_(std::move(issueNumber)), publisher_(std::move(publisher))
+    {
+      dailyFine_ = 0.5; 
+      maxLoanDays_ = 28;
+    };
+
+    // Implement pure virtual methods
+    std::string getItemType() const override {
+      return "Magazine";
+    }
+    
+    double calculateFine(int daysOverdue) const override {
+        if(daysOverdue > 0) {
+            return daysOverdue * dailyFine_;
+        }
+        return 0.0;
+    }
+
+    std::string getDetails() const override {
+      return "Magazine[ID: " + getId() + ", Title: " + getTitle() +
+        ", Issue Number: " + issueNumber_ + ", Publisher: " + publisher_ + "]";
+    }
+};
+  
+
 /**
  * TODO: Implement DVD class - derives from LibraryItem
  */
+class DVD : public LibraryItem {
+  private:
+    std::string director_;
+    int durationMinutes_;
+public:
+  // Constructor
+    DVD(std::string id, std::string title, std::string director, int durationMinutes)
+        : LibraryItem(std::move(id), std::move(title)),
+      director_(std::move(director)), durationMinutes_(durationMinutes)
+    {
+      dailyFine_ = 1.0; 
+      maxLoanDays_ = 7;
+    };
+    
+    // Implement pure virtual methods
+    std::string getItemType() const override {
+            return "DVD";
+    }
+
+    double calculateFine(int daysOverdue) const override {
+        if(daysOverdue > 0) {
+            return daysOverdue * dailyFine_;
+        }
+        return 0.0;
+    }
+
+    std::string getDetails() const override {
+      return "DVD[ID: " + getId() + ", Title: " + getTitle() +
+        ", Director: " + director_ + ", Duration: " + std::to_string(durationMinutes_) + " mins]";
+    }
+};
+
+
 /**
  * Base class for library patrons
  */
@@ -214,13 +280,66 @@ public:
     }
     
     int getLoanExtensionDays() const override {
-        // TODO: Implement this method
       return 7;
     }
 };
 /**
  * TODO: Implement Faculty class - derives from LibraryPatron
  */
+class Faculty : public LibraryPatron {
+  private:
+    std::string facultyId_;
+    std::string department_;
+  public:
+    // Constructor
+    Faculty(std::string id, std::string name, std::string contactInfo,
+            std::string facultyId, std::string department)
+        : LibraryPatron(std::move(id), std::move(name), std::move(contactInfo)),
+      facultyId_(std::move(facultyId)), department_(std::move(department))
+    {
+        maxBorrowItems_ = 10;
+    }
+    
+    // Getters
+    std::string getFacultyId() const { return facultyId_; }
+
+    std::string getPatronType() const override{
+        return "Faculty";
+    }
+
+    std::string getDepartment() const { return department_; }
+      
+    int getLoanExtensionDays() const override {
+        return 14;
+    }
+};
+
+class PublicMember : public LibraryPatron {
+  private:
+    std::string memberId_;
+    std::string address_;
+  public:
+    // Constructor
+    PublicMember(std::string id, std::string name, std::string contactInfo,
+            std::string memberId, std::string address)
+        : LibraryPatron(std::move(id), std::move(name), std::move(contactInfo)),
+      memberId_(std::move(memberId)), address_(std::move(address))
+    {
+        maxBorrowItems_ = 3;
+    }
+    
+    // Getters
+    std::string getMemberId() const { return memberId_; }
+    std::string getPatronType() const override{
+        return "PublicMember";
+    }
+      
+    int getLoanExtensionDays() const override {
+        return 0;
+    }
+};
+
+
 /**
  * Base class for transactions
  */
@@ -451,14 +570,20 @@ public:
     
     // Report methods
     void printOverdueItems() const {
+      uint32_t count = 0;
       for (const auto& transaction : transactions_) { // ai generated code  
           if(transaction->getTransactionType() == "Checkout") {
               const Checkout* checkout = dynamic_cast<const Checkout*>(transaction.get());
               if(checkout && checkout->isOverdue()) {
+                  count ++;
                   std::cout << checkout->getDetails() << ", Fine: $" << checkout->calculateFine() << std::endl;
               }
           }
       }        
+      if(0 == count)
+      {
+        std::cout << "No overdue items." << std::endl;
+      }
     }
     
     void printPatronHistory(const std::string& patronId) const {
@@ -495,11 +620,11 @@ public:
     void test(const std::string& testName, Func testFunc) {
         try {
             testFunc();
-            std::cout << "✅ PASS: " << testName << std::endl;
+            std::cout << "[PASS]: " << testName << std::endl;
             passed_++;
         }
         catch (const std::exception& e) {
-            std::cout << "❌ FAIL: " << testName << " - " << e.what() << std::endl;
+            std::cout << "[!!! FAIL !!!]: " << testName << " - " << e.what() << std::endl;
             failed_++;
         }
     }
@@ -522,9 +647,117 @@ void runTests() {
         Book book("B123", "The Great Gatsby", "F. Scott Fitzgerald", "978-3-16-148410-0", "Fiction");
         if (book.getTitle() != "The Great Gatsby") {
           throw std::runtime_error("Book title does not match");
+        }
+        if(book.calculateFine(5) != 2.5) {
+          throw std::runtime_error("Book fine calculation is incorrect");
+        }
+        if(book.calculateFine(0) != 0.0) {
+          throw std::runtime_error("Book fine calculation is incorrect");
+        }
+    });
+
+    tester.test("Create Magazine", []() {
+        Magazine mag("M123", "National Geographic", "2021-09", "NatGeo Society");
+        if (mag.getItemType() != "Magazine") {
+          throw std::runtime_error("Magazine type does not match");
+        }
+        if(mag.calculateFine(3) != 1.5) {
+          throw std::runtime_error("Magazine fine calculation is incorrect");
+        }
+        if(mag.calculateFine(0) != 0.0) {
+          throw std::runtime_error("Magazine fine calculation is incorrect");
+        }
+    });
+
+    tester.test("Create DVD", []() {
+        DVD dvd("D123", "Inception", "Christopher Nolan", 148);
+        if (dvd.getItemType() != "DVD") {
+          throw std::runtime_error("DVD type does not match");
+        }
+        if(dvd.calculateFine(3) != 3.0) {
+          throw std::runtime_error("DVD fine calculation is incorrect");
+        }
+        if(dvd.calculateFine(0) != 0.0) {
+          throw std::runtime_error("DVD fine calculation is incorrect");
+        }
+
+    });
+
+    tester.test("Create Student Patron", []() {
+      Student student("P123", "John Doe", "john.doe@example.com", "123", "Computer Science");
+      if (student.getPatronType() != "Student") {
+          throw std::runtime_error("Student patron type does not match");
+      }
+      if (student.getMajor() != "Computer Science") {
+          throw std::runtime_error("Student major does not match");
+      }
+      if(student.getMaxBorrowItems() != 5) {
+          throw std::runtime_error("Student max borrow items incorrect");
+      }
+      if(student.getLoanExtensionDays() != 7) {
+          throw std::runtime_error("Student loan extension days incorrect");
       }
     });
-    
+
+    tester.test("Create Faculty Patron", []() {
+      Faculty faculty("P124", "Dr. Jane Smith", "dr.smith@example.com", "456", "Physics");
+      if (faculty.getPatronType() != "Faculty") {
+          throw std::runtime_error("Faculty patron type does not match");
+      }
+      if (faculty.getDepartment() != "Physics") {
+          throw std::runtime_error("Faculty department does not match");
+      }
+      if(faculty.getMaxBorrowItems() != 10) {
+          throw std::runtime_error("Faculty max borrow items incorrect");
+      }
+      if(faculty.getLoanExtensionDays() != 14) {
+          throw std::runtime_error("Faculty loan extension days incorrect");
+      }
+    });
+
+    tester.test("Create PublicMember Patron", []() {
+      PublicMember member("P125", "Jane Roe", "jane.roe@example.com", "789", "Community");
+      if (member.getPatronType() != "PublicMember") {
+          throw std::runtime_error("PublicMember patron type does not match");
+      }
+      if (member.getMemberId() != "789") {
+          throw std::runtime_error("PublicMember ID does not match");
+      }
+      if(member.getMaxBorrowItems() != 3) {
+          throw std::runtime_error("PublicMember max borrow items incorrect");
+      }
+      if(member.getLoanExtensionDays() != 0) {
+          throw std::runtime_error("PublicMember loan extension days incorrect");
+      }
+    });
+
+    //tester.test("Checkout Item", []() {
+    //  Library library;
+    //  auto book = std::make_unique<Book>("B001", "1984", "George Orwell", "978-0451524935", "Dystopian");
+    //  auto student = std::make_unique<Student>("P001", "Alice Smith", "alice.smith@example.com", "123", "Computer Science");
+    //  library.addItem(std::move(book));
+    //  library.addPatron(std::move(student));
+    //  auto checkout = library.checkoutItem("B001", "P001");
+    //  if (checkout->getItem()->getId() != "B001") {
+    //      throw std::runtime_error("Checked out item ID does not match");
+    //  }
+    //  checkout->getItem()->returnItem(); // Return item for cleanup
+    //  
+    //  try{
+    //    library.checkoutItem("B001", "P002"); // Patron does not exist
+    //    throw std::runtime_error("Expected exception for non-existent patron");
+    //  } catch (const LibraryException&){
+    //    // Expected exception
+    //  }
+
+    //  try{
+    //    library.checkoutItem("B002", "P001"); // Item does not exist
+    //    throw std::runtime_error("Expected exception for non-existent item");
+    //  } catch (const LibraryException&){
+    //    // Expected exception
+    //  }      
+    //});
+
     tester.printSummary();
 }
 /**
@@ -537,7 +770,22 @@ int main() {
     std::cout << "\nRunning unit tests..." << std::endl;
     runTests();
     
-    // TODO: Create sample data and demonstrate system functionality
+    //// TODO: Create sample data and demonstrate system functionality
+    //Library library;
+    //library.addItem(std::make_unique<Book>("B001", "1984", "George Orwell", "978-0451524935", "Dystopian"));
+    //library.addItem(std::make_unique<Book>("B002", "To Kill a Mockingbird", "Harper Lee", "978-0061120084", "Fiction"));
+    //library.addItem(std::make_unique<Book>("B003", "The Great Gatsby", "F. Scott Fitzgerald", "978-0743273565", "Classic"));
+    //library.addItem(std::make_unique<Book>("B004", "The Catcher in the Rye", "J.D. Salinger", "978-0316769488", "Fiction"));
+
+
+    //library.addPatron(std::make_unique<Student>("P001", "Alice Smith", "alice.smith@example.com", "123", "Computer Science"));
+    //library.addPatron(std::make_unique<Student>("P002", "Bob Johnson", "bob.doe@example.com", "456", "Mathematics"));
+
+    //library.checkoutItem("B001", "P001");
+    //library.checkoutItem("B001", "P002");
+
+    //library.printInventory();
+    //library.printOverdueItems();
     
     return 0;
 }
